@@ -1,0 +1,29 @@
+{
+  "properties": [
+    {
+      "name": "tus-server.file-directory",
+      "type": "java.lang.String",
+      "description": "Path to saved files."
+    },
+    {
+      "name": "tus-server.max-size",
+      "type": "java.lang.Long",
+      "description": "The maximum length server allows to be uploaded."
+    },
+    {
+      "name": "tus-server.tus-checksum-algorithms",
+      "type": "java.lang.String",
+      "description": "Tus.io checksum algorithms currently supported."
+    },
+    {
+      "name": "tus-server.context-path",
+      "type": "java.lang.String",
+      "description": "tus upload path."
+    },
+    {
+      "name": "tus-server.duration",
+      "type": "java.lang.Long",
+      "description": "文件过期周期（单位：天）."
+    }
+  ]
+}
