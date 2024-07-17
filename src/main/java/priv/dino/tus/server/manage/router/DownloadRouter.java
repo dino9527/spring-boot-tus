@@ -49,6 +49,6 @@ public class DownloadRouter {
     @Bean
     public RouterFunction<ServerResponse> route() {
         return RouterFunctions
-                        .route(GET("/download/{uploadId}").and(accept(MediaType.APPLICATION_JSON)), downloadHandler);
+                        .route(GET("/download/{uploadId}"), downloadHandler);
     }
 }

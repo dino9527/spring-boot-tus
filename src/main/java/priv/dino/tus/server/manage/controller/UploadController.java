@@ -185,8 +185,7 @@ public class UploadController {
             parameters = {@Parameter(in = ParameterIn.PATH, name = "id",
                     required = true, description = "上传工作单元的ID", schema = @Schema(type = "string", format = "SnowflakeID")),
                     @Parameter(name = "Upload-Offset", in = ParameterIn.HEADER, required = true, schema = @Schema(type = "integer")),
-                    @Parameter(name = "Content-Length", in = ParameterIn.HEADER, required = true, schema = @Schema(type = "integer")),
-                    @Parameter(name = "Content-Type", example = "application/offset+octet-stream", required = true, schema = @Schema(type = "string"))})
+                    @Parameter(name = "Content-Type", in = ParameterIn.HEADER, required = true, example = "application/offset+octet-stream", schema = @Schema(type = "string"))})
     @RequestMapping(
             method = {RequestMethod.POST, RequestMethod.PATCH,},
             value = {"/{id}"},
@@ -195,8 +194,7 @@ public class UploadController {
     public Mono<ResponseEntity<Object>> uploadProcess(
             @NonNull @PathVariable("id") final Long id,
             @NonNull final ServerHttpRequest request,
-            @RequestHeader(name = "Upload-Offset") final long offset,
-            @RequestHeader(name = "Content-Length") final long length
+            @RequestHeader(name = "Upload-Offset") final long offset
     ) {
         request.getHeaders().forEach((k, v) -> log.debug("headers: {} {}", k, v));
 
@@ -204,7 +202,7 @@ public class UploadController {
         log.debug("SnowflakeID value: " + id);
 
         return uploadService
-                .uploadChunkAndGetUpdatedOffset(id, request.getBody(), offset, length)
+                .appendFileContent(id, request.getBody(), offset)
                 .log()
                 .map(e -> ResponseEntity
                         .status(NO_CONTENT)

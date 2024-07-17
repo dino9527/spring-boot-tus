@@ -34,16 +34,43 @@ public class DownloadHandler implements HandlerFunction<ServerResponse> {
         String uploadId = request.pathVariable("uploadId");
 
         return fileRepository.findById(Long.parseLong(uploadId))
-                .flatMap(e ->
-                        ServerResponse.ok()
-                                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + new String(e.getOriginalName().getBytes(StandardCharsets.UTF_8), StandardCharsets.ISO_8859_1))
+                .flatMap(e -> {
+                    String originalFileName = e.getOriginalName();
+                    String utf8EscapedFileName = escapeUtf8FileName(originalFileName);
+                    String attachment = String.format("attachment; filename=\"%s\"; filename*=utf-8''\"%s\"", utf8EscapedFileName, utf8EscapedFileName);
+                    return ServerResponse.ok()
+                                .header(HttpHeaders.CONTENT_DISPOSITION, attachment)
                                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                                 .body((p, a) -> p.writeWith(DataBufferUtils.read(Paths.get(fileDirectory.toString(), uploadId), new DefaultDataBufferFactory(), 4096)))
-                                .doOnNext(a -> log.info("Download file ID: {}", uploadId))
+                                .doOnNext(a -> log.info("Download file ID: {}", uploadId));
+                        }
                 )
                 .switchIfEmpty(ServerResponse.notFound().build());
 
 
     }
 
+    private static String escapeUtf8FileName(String originalFileName) {
+        byte[] utf8 = originalFileName.getBytes(StandardCharsets.UTF_8);
+        StringBuilder strBuilder = new StringBuilder();
+        for (byte b: utf8) {
+            char ch = (char)b;
+            if ((ch >= '0' && ch <='9') ||
+                    (ch >= 'a' && ch <='z') ||
+                    (ch >= 'A' && ch <='Z') ||
+                    ch == '-' ||
+                    ch == '_' ||
+                    ch == '.'
+            ) {
+                strBuilder.append(ch);
+                continue;
+            } else if ((b >= 0x00 && b <= 0x1F) || b == 0x7F) {
+                strBuilder.append('_');
+                continue;
+            }
+            // RFC5987 规范: 对 URL 中的 UTF-8 文本进行转义编码
+            strBuilder.append(String.format("%%%02X", b));
+        }
+        return strBuilder.toString();
+    }
 }

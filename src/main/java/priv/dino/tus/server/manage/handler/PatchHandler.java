@@ -70,15 +70,11 @@ public class PatchHandler {
             rogueRequest = true;
         }
 
-        if (!contentLength.isPresent()) {
-            rogueRequest = true;
-        }
-
         if (rogueRequest) {
             return ServerResponse.badRequest().build();
         }
 
-        return uploadService.uploadChunkAndGetUpdatedOffset(Long.valueOf(uploadId),parts,offset.get(),contentLength.get())
+        return uploadService.appendFileContent(Long.valueOf(uploadId),parts,offset.orElseGet(() -> 0L))
                 .log()
                 .flatMap(r -> ServerResponse
                     .noContent()

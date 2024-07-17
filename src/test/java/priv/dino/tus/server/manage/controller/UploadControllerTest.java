@@ -1,10 +1,9 @@
-package priv.dino.tus.server.manage.controllers;
+package priv.dino.tus.server.manage.controller;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import priv.dino.tus.server.core.configuration.properties.TusServerProperties;
 import priv.dino.tus.server.core.util.UploadExpiredUtils;
-import priv.dino.tus.server.manage.controller.UploadController;
 import priv.dino.tus.server.manage.domain.File;
 import priv.dino.tus.server.manage.repository.FileRepository;
 import priv.dino.tus.server.manage.service.UploadService;
@@ -146,12 +145,12 @@ class UploadControllerTest {
                 put("test", Collections.singletonList("test"));
             }});
         Mockito
-            .when(uploadService.uploadChunkAndGetUpdatedOffset(1L, body, 0, 3))
+            .when(uploadService.appendFileContent(1L, body, 0))
             .thenReturn(Mono.just(File.builder().contentOffset(3L).build()));
 
 
         final UploadController uploadController = new UploadController(filesRepository, tusServerProperties, uploadService, uploadExpiredUtils);
-        uploadController.uploadProcess(1L, request, 0, 3)
+        uploadController.uploadProcess(1L, request, 0)
             .subscribe(v -> {
                 assertEquals(NO_CONTENT, v.getStatusCode());
                 assertEquals("3", Objects.requireNonNull(v.getHeaders().get("Upload-Offset")).get(0));

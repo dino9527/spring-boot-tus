@@ -84,42 +84,36 @@ public class UploadService {
 
     }
 
-    public Mono<File> uploadChunkAndGetUpdatedOffset(
+    public Mono<File> appendFileContent(
             final Long id,
             final Flux<DataBuffer> parts,
-            final long offset,
-            final long length
+            final long offset
     ) {
 
         Mono<File> fileOne = fileRepository.findById(id)
                 .switchIfEmpty(Mono.error(new GlobalException(HttpStatus.INTERNAL_SERVER_ERROR, "File record not found.")))
-                .map(e -> this.isValid(e, offset, length));
+                .map(this::fileEntityIsValid);
         return Mono
                 .zip(fileOne,fileStorage.writeChunk(id, parts, offset))
-                .flatMap((Tuple2<File, Integer> data) -> this.save(data.getT1(),data.getT2()));
+                .flatMap((Tuple2<File, Integer> tuple) -> {
+                    File file = tuple.getT1();
+                    Integer nBytesAppended = tuple.getT2();
+
+                    long contentOffset = file.getContentOffset();
+                    log.info("[OLD OFFSET] {}", contentOffset);
+                    contentOffset += nBytesAppended;
+                    log.info("[OFFSET] {}", contentOffset);
+                    file.setContentOffset(contentOffset);
+                    file.setLastUploadedChunkNumber(file.getLastUploadedChunkNumber() + 1);
+                    log.debug("File patching: {}", file);
+                    return fileRepository.save(file);
+                });
     }
 
-    public Mono<File> save(File file,Integer offset) {
-        log.info("[OLD OFFSET] {}", file.getContentOffset());
-        log.info("[OFFSET] {}", file.getContentOffset() + offset);
-        file.setContentOffset(file.getContentOffset() + offset);
-        file.setLastUploadedChunkNumber(file.getLastUploadedChunkNumber() + 1);
-        log.debug("File patching: {}", file);
-        return fileRepository.save(file);
-    }
-
-    private File isValid(File file, long offset, long length) {
-        if (offset != file.getContentOffset() && checkContentLengthWithCurrentOffset(length, offset, file.getContentLength())) {
-            throw new GlobalException(HttpStatus.INTERNAL_SERVER_ERROR, "Offset mismatch.");
-        }
+    private File fileEntityIsValid(File file) {
         if (uploadExpiredUtils.checkUploadExpired(file)) {
             throw new GlobalException(HttpStatus.INTERNAL_SERVER_ERROR, "Upload Expires.");
         }
         return file;
     }
-
-    private boolean checkContentLengthWithCurrentOffset(long contentLength, long offset, long entityLength) {
-        return contentLength + offset <= entityLength;
-    }
-
 }
